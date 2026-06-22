@@ -114,6 +114,13 @@ function CustomerView() {
     localStorage.setItem("c_where", where);
     localStorage.setItem("c_zone",  zone);
 
+    // Always fetch the latest driver phone fresh at order time
+    const settings = await getSettings();
+    const freshDriverPhone = settings.active_driver_phone
+      ? settings.active_driver_phone.replace(/\D/g, "")
+      : driverPhone;
+    const freshRestaurantZone = settings.restaurant_zone || restaurantZone;
+
     const lines = cartItems
       .map((i) => `  • ${i.name} x${cart[i.id]}  ${fmt(i.price * cart[i.id])}`)
       .join("\n");
@@ -131,7 +138,7 @@ function CustomerView() {
       lines,
       ``,
       `Subtotal:  ${fmt(subtotal)}`,
-      `Delivery:  ${fmt(deliveryFee)} (${zone === restaurantZone ? "local" : "cross-area"})`,
+      `Delivery:  ${fmt(deliveryFee)} (${zone === freshRestaurantZone ? "local" : "cross-area"})`,
       `*TOTAL:    ${fmt(total)}*`,
       ``,
       `⏰ ${clock()}`,
@@ -156,7 +163,7 @@ function CustomerView() {
       setOrderError(`Could not place order: ${error.message}`);
       return;
     }
-    setWaLink(waUrl(driverPhone, msg));
+    setWaLink(waUrl(freshDriverPhone, msg));
     setStep("done");
   }
 
@@ -621,11 +628,15 @@ function RestaurantView() {
               </button>
             )}
             {order.status === "ready" && (
-              <a className="btn-wa"
-                href={waUrl(driverPhone, `Hi! Order for ${order.customer_name} is ready for pickup at ${RESTAURANT.name} 🍽️`)}
-                target="_blank" rel="noreferrer">
+              <button className="btn-wa" onClick={async () => {
+                const s = await getSettings();
+                const phone = s.active_driver_phone
+                  ? s.active_driver_phone.replace(/\D/g, "")
+                  : driverPhone;
+                window.open(waUrl(phone, `Hi! Order for ${order.customer_name} is ready for pickup at ${RESTAURANT.name} 🍽️`), "_blank");
+              }}>
                 📲 Notify Driver
-              </a>
+              </button>
             )}
           </div>
         </div>
