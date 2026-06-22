@@ -73,7 +73,33 @@ export default function App() {
   const v = view();
   if (v === "driver")     return <DriverView />;
   if (v === "restaurant") return <RestaurantView />;
+  if (v === "qr")         return <QRView />;
   return <CustomerView />;
+}
+
+// =============================================================================
+// QR CODE VIEW  /?view=qr  — open this page and print it
+// =============================================================================
+function QRView() {
+  const url = window.location.origin;
+  const qr  = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=20&data=${encodeURIComponent(url)}`;
+
+  return (
+    <div className="qr-page">
+      <div className="qr-card">
+        <div className="qr-emoji">{RESTAURANT.emoji}</div>
+        <h1 className="qr-title">{RESTAURANT.name}</h1>
+        <p className="qr-sub">Scan to order online</p>
+        <img src={qr} alt="QR Code" className="qr-img" />
+        <p className="qr-url">{url}</p>
+        <p className="qr-tagline">{RESTAURANT.tagline}</p>
+        <p className="qr-hours">{RESTAURANT.hours}</p>
+      </div>
+      <button className="btn-primary" style={{marginTop:20}} onClick={() => window.print()}>
+        🖨️ Print
+      </button>
+    </div>
+  );
 }
 
 // =============================================================================

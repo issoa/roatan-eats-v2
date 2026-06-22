@@ -255,6 +255,35 @@ body {
 .settings { border: 1.5px solid #fde8dd; }
 .hint { font-size: 0.8rem; color: #888; margin-top: 4px; }
 
+/* ── QR Code page ──────────────────────────────────────────────────────────── */
+.qr-page {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100vh; padding: 24px;
+  background: #f5f0eb;
+}
+.qr-card {
+  background: white;
+  border-radius: 20px;
+  padding: 32px 28px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  max-width: 380px; width: 100%;
+}
+.qr-emoji    { font-size: 3rem; margin-bottom: 4px; }
+.qr-title    { font-size: 1.6rem; font-weight: 800; color: #1a1a1a; margin-bottom: 4px; }
+.qr-sub      { font-size: 1rem; color: #e8734a; font-weight: 600; margin-bottom: 20px; }
+.qr-img      { width: 240px; height: 240px; border-radius: 12px; }
+.qr-url      { font-size: 0.78rem; color: #aaa; margin-top: 12px; word-break: break-all; }
+.qr-tagline  { font-size: 0.88rem; color: #555; margin-top: 14px; }
+.qr-hours    { font-size: 0.8rem; color: #aaa; margin-top: 4px; }
+
+@media print {
+  .qr-page   { background: white; padding: 0; }
+  .btn-primary { display: none; }
+  .qr-card   { box-shadow: none; border: 1px solid #eee; }
+}
+
 /* ── Empty state ───────────────────────────────────────────────────────────── */
 .empty {
   text-align: center;
