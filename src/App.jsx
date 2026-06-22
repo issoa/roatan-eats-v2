@@ -56,16 +56,15 @@ async function getSettings() {
   return data ? Object.fromEntries(data.map((r) => [r.key, r.value])) : {};
 }
 async function putSetting(key, value) {
-  // Try update first (record already exists), fall back to insert
-  const { error: upErr, count } = await supabase
+  const { data, error: upErr } = await supabase
     .from("settings")
     .update({ value })
     .eq("key", key)
     .select();
-  if (upErr) {
-    // Try insert if update failed
+  // If update hit an error OR updated 0 rows, insert instead
+  if (upErr || !data || data.length === 0) {
     const { error: inErr } = await supabase.from("settings").insert({ key, value });
-    return inErr;
+    return inErr || null;
   }
   return null;
 }
