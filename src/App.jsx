@@ -68,26 +68,30 @@ export default function App() {
 // CUSTOMER VIEW  /?
 // =============================================================================
 function CustomerView() {
-  const [cart, setCart]       = useState({});
-  const [step, setStep]       = useState("menu"); // menu | checkout | done
-  const [name, setName]       = useState(() => localStorage.getItem("c_name")     || "");
-  const [phone, setPhone]     = useState(() => localStorage.getItem("c_phone")    || "");
-  const [where, setWhere]     = useState(() => localStorage.getItem("c_where")    || "");
-  const [note, setNote]       = useState("");
-  const [zone, setZone]       = useState(() => localStorage.getItem("c_zone") || "");
-  const [driverPhone, setDriverPhone] = useState("50497010106");
-  const [waLink, setWaLink]   = useState("");
+  const [cart, setCart]         = useState({});
+  const [step, setStep]         = useState("menu"); // menu | checkout | done
+  const [name, setName]         = useState(() => localStorage.getItem("c_name")  || "");
+  const [phone, setPhone]       = useState(() => localStorage.getItem("c_phone") || "");
+  const [where, setWhere]       = useState(() => localStorage.getItem("c_where") || "");
+  const [note, setNote]         = useState("");
+  const [zone, setZone]         = useState(() => localStorage.getItem("c_zone")  || "");
+  const [driverPhone, setDriverPhone]       = useState("50497010106");
+  const [restaurantZone, setRestaurantZone] = useState(RESTAURANT.zone);
+  const [waLink, setWaLink]     = useState("");
+  const [orderError, setOrderError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     getSettings().then((s) => {
       if (s.active_driver_phone) setDriverPhone(s.active_driver_phone.replace(/\D/g, ""));
+      if (s.restaurant_zone)     setRestaurantZone(s.restaurant_zone);
     });
   }, []);
 
   const categories   = [...new Set(RESTAURANT.menu.map((i) => i.category))];
   const cartItems    = RESTAURANT.menu.filter((i) => cart[i.id]);
   const subtotal     = cartItems.reduce((s, i) => s + i.price * cart[i.id], 0);
-  const deliveryFee  = zone && zone !== RESTAURANT.zone
+  const deliveryFee  = zone && zone !== restaurantZone
     ? RESTAURANT.deliveryFeeRemote
     : RESTAURANT.deliveryFeeLocal;
   const total        = subtotal + (zone ? deliveryFee : 0);
@@ -102,7 +106,9 @@ function CustomerView() {
     });
   }
 
-  function placeOrder() {
+  async function placeOrder() {
+    setSubmitting(true);
+    setOrderError("");
     localStorage.setItem("c_name",  name);
     localStorage.setItem("c_phone", phone);
     localStorage.setItem("c_where", where);
@@ -125,13 +131,13 @@ function CustomerView() {
       lines,
       ``,
       `Subtotal:  ${fmt(subtotal)}`,
-      `Delivery:  ${fmt(deliveryFee)} (${zone === RESTAURANT.zone ? "local" : "cross-area"})`,
+      `Delivery:  ${fmt(deliveryFee)} (${zone === restaurantZone ? "local" : "cross-area"})`,
       `*TOTAL:    ${fmt(total)}*`,
       ``,
       `⏰ ${clock()}`,
     ].filter((l) => l !== null).join("\n");
 
-    supabase.from("orders").insert({
+    const { error } = await supabase.from("orders").insert({
       customer_name:    name.trim(),
       customer_phone:   phone.trim(),
       delivery_address: where.trim(),
@@ -145,6 +151,11 @@ function CustomerView() {
       order_time:       clock(),
     });
 
+    setSubmitting(false);
+    if (error) {
+      setOrderError(`Could not place order: ${error.message}`);
+      return;
+    }
     setWaLink(waUrl(driverPhone, msg));
     setStep("done");
   }
@@ -197,7 +208,7 @@ function CustomerView() {
           <option value="">Select your area *</option>
           {RESTAURANT.zones.map((z) => (
             <option key={z} value={z}>
-              {z} — {z === RESTAURANT.zone ? fmt(RESTAURANT.deliveryFeeLocal) : fmt(RESTAURANT.deliveryFeeRemote)} delivery
+              {z} — {z === restaurantZone ? fmt(RESTAURANT.deliveryFeeLocal) : fmt(RESTAURANT.deliveryFeeRemote)} delivery
             </option>
           ))}
         </select>
@@ -207,12 +218,13 @@ function CustomerView() {
         <textarea className="inp" rows={2}
           placeholder="Any notes? (optional)"
           value={note} onChange={(e) => setNote(e.target.value)} />
+        {orderError && <p style={{color:"#c0392b",fontSize:"0.85rem",marginTop:"8px"}}>{orderError}</p>}
         <button
           className="btn-primary full"
-          disabled={!name.trim() || !where.trim() || !zone}
+          disabled={!name.trim() || !where.trim() || !zone || submitting}
           onClick={placeOrder}
         >
-          📲 Send Order via WhatsApp
+          {submitting ? "Placing order…" : "📲 Send Order via WhatsApp"}
         </button>
       </div>
     </div>
@@ -471,16 +483,23 @@ function DriverView() {
 // RESTAURANT VIEW  /?view=restaurant
 // =============================================================================
 function RestaurantView() {
-  const [auth, setAuth]           = useState(false);
+  const [auth, setAuth]             = useState(false);
   const [correctPin, setCorrectPin] = useState(RESTAURANT.kitchenPin);
-  const [orders, setOrders]       = useState([]);
-  const [driverPhone, setDriverPhone] = useState("50497010106");
+  const [orders, setOrders]         = useState([]);
+  const [driverPhone, setDriverPhone]         = useState("50497010106");
+  const [restaurantZone, setRestaurantZone]   = useState(RESTAURANT.zone);
+  const [newZone, setNewZone]       = useState(RESTAURANT.zone);
+  const [showSettings, setShowSettings]       = useState(false);
   const pollRef = useRef(null);
 
   useEffect(() => {
     getSettings().then((s) => {
       if (s.restaurant_pin)      setCorrectPin(s.restaurant_pin);
       if (s.active_driver_phone) setDriverPhone(s.active_driver_phone.replace(/\D/g, ""));
+      if (s.restaurant_zone) {
+        setRestaurantZone(s.restaurant_zone);
+        setNewZone(s.restaurant_zone);
+      }
     });
   }, []);
 
@@ -521,6 +540,12 @@ function RestaurantView() {
     setOrders((prev) => prev.filter((o) => !ids.includes(o.id)));
   }
 
+  async function saveZone() {
+    await putSetting("restaurant_zone", newZone);
+    setRestaurantZone(newZone);
+    setShowSettings(false);
+  }
+
   if (!auth) return (
     <PinGate title="🍳 Kitchen Login" correctPin={correctPin} onAuth={() => setAuth(true)} />
   );
@@ -544,10 +569,29 @@ function RestaurantView() {
       <header className="hdr">
         <div className="hdr-row">
           <h1>🍳 {RESTAURANT.name}</h1>
-          {done.length > 0 && <button className="btn-sm danger" onClick={clearDone}>🗑️ Clear</button>}
+          <div className="hdr-actions">
+            {done.length > 0 && <button className="btn-sm danger" onClick={clearDone}>🗑️ Clear</button>}
+            <button className="btn-sm" onClick={() => setShowSettings((s) => !s)}>⚙️</button>
+          </div>
         </div>
-        <p className="sub">Kitchen · Active: {active.length}</p>
+        <p className="sub">Kitchen · {restaurantZone} · Active: {active.length}</p>
       </header>
+
+      {showSettings && (
+        <div className="card settings">
+          <h3>Restaurant Location</h3>
+          <p className="hint">Set your area so delivery fees calculate correctly for customers.</p>
+          <select className="inp" value={newZone} onChange={(e) => setNewZone(e.target.value)}>
+            {RESTAURANT.zones.map((z) => (
+              <option key={z} value={z}>{z}</option>
+            ))}
+          </select>
+          <div className="row-gap">
+            <button className="btn-primary" onClick={saveZone}>Save</button>
+            <button className="btn-ghost"   onClick={() => setShowSettings(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
 
       {orders.length === 0 && (
         <p className="empty">No orders yet — they'll appear here automatically when customers order.</p>
