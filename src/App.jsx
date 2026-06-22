@@ -8,6 +8,7 @@ const supabase = createClient(
 
 // ── Config — edit this to change restaurant / menu / PINs ───────────────────
 const RESTAURANT = {
+  id:                 "chicken-shack",   // used in URL: ?view=restaurant&r=chicken-shack
   name:               "Chicken Shack",
   emoji:              "🍗",
   tagline:            "Honduran comfort food & fresh island seafood",
@@ -47,7 +48,8 @@ const RESTAURANT = {
 const fmt   = (n) => `$${Number(n).toFixed(2)}`;
 const clock = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const waUrl = (phone, msg) => `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
-const view  = () => new URLSearchParams(window.location.search).get("view") || "customer";
+const view     = () => new URLSearchParams(window.location.search).get("view") || "customer";
+const urlParam = (k) => new URLSearchParams(window.location.search).get(k);
 
 async function getSettings() {
   const { data } = await supabase.from("settings").select("key,value");
@@ -447,7 +449,7 @@ function DriverView() {
   }
 
   if (!auth) return (
-    <PinGate title="🛵 Driver Login" correctPin={correctPin} onAuth={() => setAuth(true)} />
+    <PinGate title={`🛵 ${RESTAURANT.name} Driver`} correctPin={correctPin} onAuth={() => setAuth(true)} />
   );
 
   const active = orders.filter((o) => o.status !== "delivered");
@@ -637,8 +639,17 @@ function RestaurantView() {
     alert(`✅ Saved! Zone: ${newZone}${p ? ` · Phone: ${p}` : ""}`);
   }
 
+  // If a restaurant ID is in the URL, validate it
+  const rid = urlParam("r");
+  if (rid && rid !== RESTAURANT.id) return (
+    <div className="pin-screen">
+      <h2>🍳 Restaurant not found</h2>
+      <p style={{color:"var(--color-text-secondary)",textAlign:"center",marginTop:8}}>Check your link — no restaurant matches "{rid}"</p>
+    </div>
+  );
+
   if (!auth) return (
-    <PinGate title="🍳 Kitchen Login" correctPin={correctPin} onAuth={() => setAuth(true)} />
+    <PinGate title={`🍳 ${RESTAURANT.name} Kitchen`} correctPin={correctPin} onAuth={() => setAuth(true)} />
   );
 
   const active = orders.filter((o) => !["picked_up", "delivered"].includes(o.status));
