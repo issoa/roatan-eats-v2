@@ -53,7 +53,18 @@ async function getSettings() {
   return data ? Object.fromEntries(data.map((r) => [r.key, r.value])) : {};
 }
 async function putSetting(key, value) {
-  await supabase.from("settings").upsert({ key, value });
+  // Try update first (record already exists), fall back to insert
+  const { error: upErr, count } = await supabase
+    .from("settings")
+    .update({ value })
+    .eq("key", key)
+    .select();
+  if (upErr) {
+    // Try insert if update failed
+    const { error: inErr } = await supabase.from("settings").insert({ key, value });
+    return inErr;
+  }
+  return null;
 }
 
 // ── Root ─────────────────────────────────────────────────────────────────────
@@ -382,9 +393,12 @@ function DriverView() {
 
   async function savePhone() {
     const p = newPhone.replace(/\D/g, "");
-    await putSetting("active_driver_phone", p);
+    if (!p) { alert("Please enter a phone number"); return; }
+    const err = await putSetting("active_driver_phone", p);
+    if (err) { alert(`Could not save phone number: ${err.message}`); return; }
     setDriverPhone(p);
     setShowSettings(false);
+    alert(`✅ Driver number saved: ${p}`);
   }
 
   if (!auth) return (
@@ -548,9 +562,11 @@ function RestaurantView() {
   }
 
   async function saveZone() {
-    await putSetting("restaurant_zone", newZone);
+    const err = await putSetting("restaurant_zone", newZone);
+    if (err) { alert(`Could not save zone: ${err.message}`); return; }
     setRestaurantZone(newZone);
     setShowSettings(false);
+    alert(`✅ Restaurant zone saved: ${newZone}`);
   }
 
   if (!auth) return (
