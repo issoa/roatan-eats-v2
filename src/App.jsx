@@ -335,23 +335,24 @@ function PinGate({ title, correctPin, onAuth }) {
 // DRIVER VIEW  /?view=driver
 // =============================================================================
 function DriverView() {
-  const [auth, setAuth]           = useState(false);
-  const [correctPin, setCorrectPin] = useState(RESTAURANT.driverPin);
-  const [orders, setOrders]       = useState([]);
+  const [auth, setAuth]               = useState(false);
+  const [correctPin, setCorrectPin]   = useState(RESTAURANT.driverPin);
+  const [orders, setOrders]           = useState([]);
   const [driverPhone, setDriverPhone] = useState("");
-  const [newPhone, setNewPhone]   = useState("");
-  const [showSettings, setShowSettings] = useState(false);
+  const [newPhone, setNewPhone]       = useState("");
+  const [restaurantPhone, setRestaurantPhone] = useState("");
+  const [showSettings, setShowSettings]       = useState(false);
   const pollRef = useRef(null);
 
   useEffect(() => {
     getSettings().then((s) => {
-      if (s.driver_pin)         setCorrectPin(s.driver_pin);
+      if (s.driver_pin) setCorrectPin(s.driver_pin);
       if (s.active_driver_phone) {
         const p = s.active_driver_phone.replace(/\D/g, "");
         setDriverPhone(p);
         setNewPhone(p);
-        putSetting("active_driver_phone", p); // keep fresh on login
       }
+      if (s.restaurant_phone) setRestaurantPhone(s.restaurant_phone.replace(/\D/g, ""));
     });
   }, []);
 
@@ -464,9 +465,19 @@ function DriverView() {
               <a className="btn-wa"
                 href={waUrl(order.customer_phone, `Hi ${order.customer_name}! This is your Roatan Eats driver 🛵 I'm on my way with your order!`)}
                 target="_blank" rel="noreferrer">
-                📲 WhatsApp
+                👤 Customer
               </a>
             )}
+            <button className="btn-wa green" onClick={async () => {
+              const s = await getSettings();
+              const rPhone = s.restaurant_phone
+                ? s.restaurant_phone.replace(/\D/g, "")
+                : restaurantPhone;
+              if (!rPhone) { alert("No restaurant phone saved yet. Go to the kitchen screen → ⚙️ to set it."); return; }
+              window.open(waUrl(rPhone, `Hi ${RESTAURANT.name}! 🛵 I'm the driver. On my way to pick up order for ${order.customer_name}. Items: ${order.items ? order.items.map(i => `${i.name} ×${i.quantity}`).join(", ") : ""}`), "_blank");
+            }}>
+              🍳 Restaurant
+            </button>
             {order.status !== "picked_up" && (
               <button className="btn-primary" onClick={() => advance(order.id, order.status)}>
                 🛵 Picked Up
@@ -507,10 +518,12 @@ function RestaurantView() {
   const [auth, setAuth]             = useState(false);
   const [correctPin, setCorrectPin] = useState(RESTAURANT.kitchenPin);
   const [orders, setOrders]         = useState([]);
-  const [driverPhone, setDriverPhone]         = useState("50497010106");
-  const [restaurantZone, setRestaurantZone]   = useState(RESTAURANT.zone);
-  const [newZone, setNewZone]       = useState(RESTAURANT.zone);
-  const [showSettings, setShowSettings]       = useState(false);
+  const [driverPhone, setDriverPhone]               = useState("");
+  const [restaurantZone, setRestaurantZone]         = useState(RESTAURANT.zone);
+  const [restaurantPhone, setRestaurantPhone]       = useState("");
+  const [newZone, setNewZone]         = useState(RESTAURANT.zone);
+  const [newRestPhone, setNewRestPhone]             = useState("");
+  const [showSettings, setShowSettings]             = useState(false);
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -520,6 +533,11 @@ function RestaurantView() {
       if (s.restaurant_zone) {
         setRestaurantZone(s.restaurant_zone);
         setNewZone(s.restaurant_zone);
+      }
+      if (s.restaurant_phone) {
+        const p = s.restaurant_phone.replace(/\D/g, "");
+        setRestaurantPhone(p);
+        setNewRestPhone(p);
       }
     });
   }, []);
@@ -561,12 +579,18 @@ function RestaurantView() {
     setOrders((prev) => prev.filter((o) => !ids.includes(o.id)));
   }
 
-  async function saveZone() {
-    const err = await putSetting("restaurant_zone", newZone);
-    if (err) { alert(`Could not save zone: ${err.message}`); return; }
+  async function saveSettings() {
+    const p = newRestPhone.replace(/\D/g, "");
+    const errZone  = await putSetting("restaurant_zone", newZone);
+    const errPhone = p ? await putSetting("restaurant_phone", p) : null;
+    if (errZone || errPhone) {
+      alert(`Save failed: ${(errZone || errPhone).message}`);
+      return;
+    }
     setRestaurantZone(newZone);
+    if (p) setRestaurantPhone(p);
     setShowSettings(false);
-    alert(`✅ Restaurant zone saved: ${newZone}`);
+    alert(`✅ Saved! Zone: ${newZone}${p ? ` · Phone: ${p}` : ""}`);
   }
 
   if (!auth) return (
@@ -602,15 +626,17 @@ function RestaurantView() {
 
       {showSettings && (
         <div className="card settings">
-          <h3>Restaurant Location</h3>
-          <p className="hint">Set your area so delivery fees calculate correctly for customers.</p>
+          <h3>Restaurant Settings</h3>
+          <p className="hint">Your WhatsApp number (so the driver can reach you).</p>
+          <input className="inp" value={newRestPhone} onChange={(e) => setNewRestPhone(e.target.value)} placeholder="504xxxxxxxxx" />
+          <p className="hint" style={{marginTop:10}}>Your area (for delivery fee calculation).</p>
           <select className="inp" value={newZone} onChange={(e) => setNewZone(e.target.value)}>
             {RESTAURANT.zones.map((z) => (
               <option key={z} value={z}>{z}</option>
             ))}
           </select>
           <div className="row-gap">
-            <button className="btn-primary" onClick={saveZone}>Save</button>
+            <button className="btn-primary" onClick={saveSettings}>Save</button>
             <button className="btn-ghost"   onClick={() => setShowSettings(false)}>Cancel</button>
           </div>
         </div>

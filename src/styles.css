@@ -173,7 +173,8 @@ body {
   cursor: pointer; text-decoration: none;
   display: inline-block;
 }
-.btn-wa.full { width: 100%; text-align: center; padding: 14px; font-size: 1rem; }
+.btn-wa.full  { width: 100%; text-align: center; padding: 14px; font-size: 1rem; }
+.btn-wa.green { background: #128c7e; }
 
 .btn-sm {
   background: white;
