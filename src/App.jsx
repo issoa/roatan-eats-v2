@@ -8,12 +8,24 @@ const supabase = createClient(
 
 // ── Config — edit this to change restaurant / menu / PINs ───────────────────
 const RESTAURANT = {
-  name:        "Chicken Shack",
-  emoji:       "🍗",
-  tagline:     "Honduran comfort food & fresh island seafood",
-  address:     "West End, Roatan",
-  hours:       "Mon–Sun  10am – 9pm",
-  deliveryFee: 5.00,
+  name:               "Chicken Shack",
+  emoji:              "🍗",
+  tagline:            "Honduran comfort food & fresh island seafood",
+  address:            "West End, Roatan",
+  hours:              "Mon–Sun  10am – 9pm",
+  zone:               "West End",        // restaurant's own area
+  deliveryFeeLocal:   10.00,             // same area as restaurant
+  deliveryFeeRemote:  15.00,             // different area
+  zones: [                               // all areas you deliver to
+    "West End",
+    "Half Moon Bay",
+    "Sandy Bay",
+    "West Bay",
+    "Flowers Bay",
+    "Coxen Hole",
+    "French Harbour",
+    "Oak Ridge",
+  ],
   driverPin:   "1234",
   kitchenPin:  "5678",
   menu: [
@@ -62,6 +74,7 @@ function CustomerView() {
   const [phone, setPhone]     = useState(() => localStorage.getItem("c_phone")    || "");
   const [where, setWhere]     = useState(() => localStorage.getItem("c_where")    || "");
   const [note, setNote]       = useState("");
+  const [zone, setZone]       = useState(() => localStorage.getItem("c_zone") || "");
   const [driverPhone, setDriverPhone] = useState("50497010106");
   const [waLink, setWaLink]   = useState("");
 
@@ -71,11 +84,14 @@ function CustomerView() {
     });
   }, []);
 
-  const categories = [...new Set(RESTAURANT.menu.map((i) => i.category))];
-  const cartItems  = RESTAURANT.menu.filter((i) => cart[i.id]);
-  const subtotal   = cartItems.reduce((s, i) => s + i.price * cart[i.id], 0);
-  const total      = subtotal + RESTAURANT.deliveryFee;
-  const itemCount  = Object.values(cart).reduce((s, n) => s + n, 0);
+  const categories   = [...new Set(RESTAURANT.menu.map((i) => i.category))];
+  const cartItems    = RESTAURANT.menu.filter((i) => cart[i.id]);
+  const subtotal     = cartItems.reduce((s, i) => s + i.price * cart[i.id], 0);
+  const deliveryFee  = zone && zone !== RESTAURANT.zone
+    ? RESTAURANT.deliveryFeeRemote
+    : RESTAURANT.deliveryFeeLocal;
+  const total        = subtotal + (zone ? deliveryFee : 0);
+  const itemCount    = Object.values(cart).reduce((s, n) => s + n, 0);
 
   function add(id) { setCart((c) => ({ ...c, [id]: (c[id] || 0) + 1 })); }
   function rem(id) {
@@ -90,6 +106,7 @@ function CustomerView() {
     localStorage.setItem("c_name",  name);
     localStorage.setItem("c_phone", phone);
     localStorage.setItem("c_where", where);
+    localStorage.setItem("c_zone",  zone);
 
     const lines = cartItems
       .map((i) => `  • ${i.name} x${cart[i.id]}  ${fmt(i.price * cart[i.id])}`)
@@ -101,13 +118,14 @@ function CustomerView() {
       `👤 ${name}`,
       `📱 ${phone}`,
       `📍 ${where}`,
+      `🗺️ Area: ${zone}`,
       note ? `📝 ${note}` : null,
       ``,
       `*Order:*`,
       lines,
       ``,
       `Subtotal:  ${fmt(subtotal)}`,
-      `Delivery:  ${fmt(RESTAURANT.deliveryFee)}`,
+      `Delivery:  ${fmt(deliveryFee)} (${zone === RESTAURANT.zone ? "local" : "cross-area"})`,
       `*TOTAL:    ${fmt(total)}*`,
       ``,
       `⏰ ${clock()}`,
@@ -120,7 +138,7 @@ function CustomerView() {
       note:             note.trim(),
       items:            cartItems.map((i) => ({ id: i.id, name: i.name, price: i.price, quantity: cart[i.id] })),
       subtotal,
-      delivery_fee:     RESTAURANT.deliveryFee,
+      delivery_fee:     deliveryFee,
       total,
       status:           "new",
       restaurant:       RESTAURANT.name,
@@ -164,23 +182,34 @@ function CustomerView() {
             <span>{fmt(i.price * cart[i.id])}</span>
           </div>
         ))}
-        <div className="row muted"><span>Delivery fee</span><span>{fmt(RESTAURANT.deliveryFee)}</span></div>
-        <div className="row grand"><span>Total</span><strong>{fmt(total)}</strong></div>
+        <div className="row muted">
+          <span>Delivery{zone ? ` · ${zone}` : ""}</span>
+          <span>{zone ? fmt(deliveryFee) : "select area below"}</span>
+        </div>
+        <div className="row grand"><span>Total</span><strong>{zone ? fmt(total) : "—"}</strong></div>
       </div>
 
       <div className="card">
         <h3>Your Details</h3>
         <input  className="inp" placeholder="Your name *"              value={name}  onChange={(e) => setName(e.target.value)} />
         <input  className="inp" placeholder="Your WhatsApp number"     value={phone} onChange={(e) => setPhone(e.target.value)} />
+        <select className="inp" value={zone} onChange={(e) => setZone(e.target.value)}>
+          <option value="">Select your area *</option>
+          {RESTAURANT.zones.map((z) => (
+            <option key={z} value={z}>
+              {z} — {z === RESTAURANT.zone ? fmt(RESTAURANT.deliveryFeeLocal) : fmt(RESTAURANT.deliveryFeeRemote)} delivery
+            </option>
+          ))}
+        </select>
         <textarea className="inp" rows={3}
-          placeholder="Where to deliver? (e.g. Blue Parrot bungalow 3, near the dock) *"
+          placeholder="Exact location (e.g. Blue Parrot bungalow 3, near the dock) *"
           value={where} onChange={(e) => setWhere(e.target.value)} />
         <textarea className="inp" rows={2}
           placeholder="Any notes? (optional)"
           value={note} onChange={(e) => setNote(e.target.value)} />
         <button
           className="btn-primary full"
-          disabled={!name.trim() || !where.trim()}
+          disabled={!name.trim() || !where.trim() || !zone}
           onClick={placeOrder}
         >
           📲 Send Order via WhatsApp
@@ -228,7 +257,7 @@ function CustomerView() {
 
       {itemCount > 0 && (
         <div className="cart-bar">
-          <span>{itemCount} item{itemCount !== 1 ? "s" : ""} · {fmt(total)}</span>
+          <span>{itemCount} item{itemCount !== 1 ? "s" : ""} · {fmt(subtotal)} + delivery</span>
           <button className="btn-primary" onClick={() => setStep("checkout")}>View Order →</button>
         </div>
       )}
