@@ -151,6 +151,7 @@ function CustomerView() {
       lines,
       ``,
       `Subtotal:  ${fmt(subtotal)}`,
+      `Tax 12%:   ${fmt(tax)}`,
       `Delivery:  ${fmt(deliveryFee)} (${zone === freshRestaurantZone ? "local" : "cross-area"})`,
       `*TOTAL:    ${fmt(total)}*`,
       ``,
@@ -189,7 +190,12 @@ function CustomerView() {
         <h2>Order Received!</h2>
         <p>Tap below to send your order to the driver on WhatsApp.</p>
         <a className="btn-wa full" href={waLink} target="_blank" rel="noreferrer">
-          📲 Send Order via WhatsApp
+          📲 Send Order to Driver
+        </a>
+        <a className="btn-wa full" style={{background:"#128c7e", marginTop:8}}
+          href={waUrl(driverPhone, `Hi! I just placed an order and want to follow up 🛵`)}
+          target="_blank" rel="noreferrer">
+          💬 Contact Driver
         </a>
         <button className="btn-ghost full" onClick={() => { setCart({}); setNote(""); setStep("menu"); }}>
           ← Back to Menu
@@ -213,6 +219,7 @@ function CustomerView() {
             <span>{fmt(i.price * cart[i.id])}</span>
           </div>
         ))}
+        <div className="row muted"><span>Tax (12%)</span><span>{fmt(tax)}</span></div>
         <div className="row muted">
           <span>Delivery{zone ? ` · ${zone}` : ""}</span>
           <span>{zone ? fmt(deliveryFee) : "select area below"}</span>
@@ -254,7 +261,16 @@ function CustomerView() {
   return (
     <div className="app">
       <header className="hdr">
-        <h1>{RESTAURANT.emoji} {RESTAURANT.name}</h1>
+        <div className="hdr-row">
+          <h1>{RESTAURANT.emoji} {RESTAURANT.name}</h1>
+          {driverPhone && (
+            <a className="btn-wa-sm"
+              href={waUrl(driverPhone, "Hi! I have a question about my order 🛵")}
+              target="_blank" rel="noreferrer">
+              💬 Driver
+            </a>
+          )}
+        </div>
         <p className="sub">{RESTAURANT.tagline}</p>
         <p className="meta">{RESTAURANT.hours} · {RESTAURANT.address}</p>
       </header>

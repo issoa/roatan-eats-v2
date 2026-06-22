@@ -175,6 +175,17 @@ body {
 }
 .btn-wa.full  { width: 100%; text-align: center; padding: 14px; font-size: 1rem; }
 .btn-wa.green { background: #128c7e; }
+.btn-wa-sm {
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border: 1.5px solid rgba(255,255,255,0.5);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
 
 .btn-sm {
   background: white;
