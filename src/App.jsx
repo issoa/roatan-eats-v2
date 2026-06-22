@@ -639,7 +639,19 @@ function RestaurantView() {
             <button className="btn-sm" onClick={() => setShowSettings((s) => !s)}>⚙️</button>
           </div>
         </div>
-        <p className="sub">Kitchen · {restaurantZone} · Active: {active.length}</p>
+        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:6}}>
+          <p className="sub" style={{margin:0}}>Kitchen · {restaurantZone} · Active: {active.length}</p>
+          <button className="btn-wa-sm" onClick={async () => {
+            const s = await getSettings();
+            const phone = s.active_driver_phone
+              ? s.active_driver_phone.replace(/\D/g, "")
+              : driverPhone;
+            if (!phone) { alert("No driver phone saved yet."); return; }
+            window.open(waUrl(phone, `Hi Driver! 🍳 This is ${RESTAURANT.name}. Can you please contact us?`), "_blank");
+          }}>
+            💬 Driver
+          </button>
+        </div>
       </header>
 
       {showSettings && (
