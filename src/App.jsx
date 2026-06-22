@@ -16,6 +16,7 @@ const RESTAURANT = {
   zone:               "West End",        // restaurant's own area
   deliveryFeeLocal:   10.00,             // same area as restaurant
   deliveryFeeRemote:  15.00,             // different area
+  taxRate:            0.12,              // 12% food tax
   zones: [                               // all areas you deliver to
     "West End",
     "Half Moon Bay",
@@ -102,10 +103,11 @@ function CustomerView() {
   const categories   = [...new Set(RESTAURANT.menu.map((i) => i.category))];
   const cartItems    = RESTAURANT.menu.filter((i) => cart[i.id]);
   const subtotal     = cartItems.reduce((s, i) => s + i.price * cart[i.id], 0);
+  const tax          = subtotal * RESTAURANT.taxRate;
   const deliveryFee  = zone && zone !== restaurantZone
     ? RESTAURANT.deliveryFeeRemote
     : RESTAURANT.deliveryFeeLocal;
-  const total        = subtotal + (zone ? deliveryFee : 0);
+  const total        = subtotal + tax + (zone ? deliveryFee : 0);
   const itemCount    = Object.values(cart).reduce((s, n) => s + n, 0);
 
   function add(id) { setCart((c) => ({ ...c, [id]: (c[id] || 0) + 1 })); }
