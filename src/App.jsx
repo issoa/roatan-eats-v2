@@ -104,6 +104,46 @@ function QRView() {
 }
 
 // =============================================================================
+// HISTORY PANEL (shared by all 3 views)
+// =============================================================================
+function HistoryPanel({ title, filterFn, labelFn, onClose }) {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.from("orders").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => {
+        setOrders(data ? data.filter(filterFn) : []);
+        setLoading(false);
+      });
+  }, []);
+
+  return (
+    <div className="history-overlay">
+      <div className="history-panel">
+        <div className="history-hdr">
+          <h2>{title}</h2>
+          <button className="history-close" onClick={onClose}>✕</button>
+        </div>
+        {loading && <p className="empty">Loading…</p>}
+        {!loading && orders.length === 0 && <p className="empty">No history yet.</p>}
+        {orders.map((o) => (
+          <div key={o.id} className="card order dimmed" style={{marginTop:8}}>
+            <div className="order-top">
+              <strong>{o.customer_name}</strong>
+              <span className="badge done">{labelFn(o)}</span>
+            </div>
+            <div className="order-meta">📍 {o.delivery_address}</div>
+            {o.items && <div className="order-meta">🍽️ {o.items.map(i=>`${i.name} ×${i.quantity}`).join(", ")}</div>}
+            <div className="order-meta">💵 {fmt(o.total)} · {o.order_time}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
 // CUSTOMER VIEW  /?
 // =============================================================================
 function CustomerView() {
@@ -119,16 +159,21 @@ function CustomerView() {
   const [waLink, setWaLink]     = useState("");
   const [orderError, setOrderError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [menu, setMenu] = useState(RESTAURANT.menu);
 
   useEffect(() => {
     getSettings().then((s) => {
       if (s.active_driver_phone) setDriverPhone(s.active_driver_phone.replace(/\D/g, ""));
       if (s.restaurant_zone)     setRestaurantZone(s.restaurant_zone);
+      if (s[`menu_${RESTAURANT.id}`]) {
+        try { setMenu(JSON.parse(s[`menu_${RESTAURANT.id}`])); } catch {}
+      }
     });
   }, []);
 
-  const categories   = [...new Set(RESTAURANT.menu.map((i) => i.category))];
-  const cartItems    = RESTAURANT.menu.filter((i) => cart[i.id]);
+  const categories   = [...new Set(menu.map((i) => i.category))];
+  const cartItems    = menu.filter((i) => cart[i.id]);
   const subtotal     = cartItems.reduce((s, i) => s + i.price * cart[i.id], 0);
   const tax          = subtotal * RESTAURANT.taxRate;
   const deliveryFee  = zone && zone !== restaurantZone
@@ -290,24 +335,35 @@ function CustomerView() {
       <header className="hdr">
         <div className="hdr-row">
           <h1>{RESTAURANT.emoji} {RESTAURANT.name}</h1>
-          {driverPhone && (
-            <a className="btn-wa-sm"
-              href={waUrl(driverPhone, "Hi! I have a question about my order 🛵")}
-              target="_blank" rel="noreferrer">
-              💬 Driver
-            </a>
-          )}
+          <div className="hdr-actions">
+            {driverPhone && (
+              <a className="btn-wa-sm"
+                href={waUrl(driverPhone, "Hi! I have a question about my order 🛵")}
+                target="_blank" rel="noreferrer">💬 Driver</a>
+            )}
+            <button className="btn-sm" onClick={() => setShowHistory(true)}>📋 History</button>
+          </div>
         </div>
         <p className="sub">{RESTAURANT.tagline}</p>
         <p className="meta">{RESTAURANT.hours} · {RESTAURANT.address}</p>
       </header>
 
+      {showHistory && (
+        <HistoryPanel
+          title="Your Order History"
+          filterFn={(o) => o.customer_phone === phone && o.status === "delivered"}
+          labelFn={(o) => o.status}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
+
       {categories.map((cat) => (
         <div key={cat} className="card">
           <div className="cat-title">{cat}</div>
-          {RESTAURANT.menu.filter((i) => i.category === cat).map((item) => (
+          {menu.filter((i) => i.category === cat).map((item) => (
             <div key={item.id} className="menu-row">
               <div className="menu-info">
+                {item.image && <img src={item.image} alt={item.name} className="menu-item-img" />}
                 <div className="menu-name">{item.name}</div>
                 <div className="menu-desc">{item.desc}</div>
                 <div className="menu-price">{fmt(item.price)}</div>
@@ -387,6 +443,7 @@ function DriverView() {
   const [newPhone, setNewPhone]       = useState("");
   const [restaurantPhone, setRestaurantPhone] = useState("");
   const [showSettings, setShowSettings]       = useState(false);
+  const [showHistory, setShowHistory]         = useState(false);
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -469,11 +526,21 @@ function DriverView() {
           <h1>🛵 Driver</h1>
           <div className="hdr-actions">
             {done.length > 0 && <button className="btn-sm danger" onClick={clearDone}>🗑️ Clear</button>}
+            <button className="btn-sm" onClick={() => setShowHistory(true)}>📋</button>
             <button className="btn-sm" onClick={() => setShowSettings((s) => !s)}>⚙️</button>
           </div>
         </div>
         <p className="sub">Active orders: {active.length}</p>
       </header>
+
+      {showHistory && (
+        <HistoryPanel
+          title="📋 Delivery History"
+          filterFn={(o) => o.status === "delivered"}
+          labelFn={(o) => o.order_time || "delivered"}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
 
       {showSettings && (
         <div className="card settings">
@@ -569,6 +636,8 @@ function RestaurantView() {
   const [newZone, setNewZone]         = useState(RESTAURANT.zone);
   const [newRestPhone, setNewRestPhone]             = useState("");
   const [showSettings, setShowSettings]             = useState(false);
+  const [showHistory, setShowHistory]               = useState(false);
+  const [showMenu, setShowMenu]                     = useState(false);
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -672,6 +741,8 @@ function RestaurantView() {
           <h1>🍳 {RESTAURANT.name}</h1>
           <div className="hdr-actions">
             {done.length > 0 && <button className="btn-sm danger" onClick={clearDone}>🗑️ Clear</button>}
+            <button className="btn-sm" onClick={() => setShowHistory(true)}>📋</button>
+            <button className="btn-sm" onClick={() => setShowMenu(true)}>🍽️</button>
             <button className="btn-sm" onClick={() => setShowSettings((s) => !s)}>⚙️</button>
           </div>
         </div>
@@ -707,6 +778,17 @@ function RestaurantView() {
           </div>
         </div>
       )}
+
+      {showHistory && (
+        <HistoryPanel
+          title="📋 Order History"
+          filterFn={(o) => ["picked_up","delivered"].includes(o.status)}
+          labelFn={(o) => o.order_time || o.status}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
+
+      {showMenu && <MenuEditor onClose={() => setShowMenu(false)} />}
 
       {orders.length === 0 && (
         <p className="empty">No orders yet — they'll appear here automatically when customers order.</p>
@@ -768,6 +850,151 @@ function RestaurantView() {
           ))}
         </>
       )}
+    </div>
+  );
+}
+
+// =============================================================================
+// MENU EDITOR  — opened from restaurant /?view=restaurant via 🍽️ button
+// =============================================================================
+const CATEGORIES = ["Breakfast", "Mains", "Sides", "Drinks", "Specials"];
+const BLANK_ITEM = { name: "", category: "Mains", desc: "", price: "", image: "" };
+
+function MenuEditor({ onClose }) {
+  const [items, setItems]       = useState(RESTAURANT.menu.map(i => ({ ...i })));
+  const [editing, setEditing]   = useState(null);
+  const [form, setForm]         = useState(BLANK_ITEM);
+  const [saving, setSaving]     = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadErr, setUploadErr] = useState("");
+
+  useEffect(() => {
+    getSettings().then((s) => {
+      if (s[`menu_${RESTAURANT.id}`]) {
+        try { setItems(JSON.parse(s[`menu_${RESTAURANT.id}`])); } catch {}
+      }
+    });
+  }, []);
+
+  async function save(updated) {
+    setSaving(true);
+    await putSetting(`menu_${RESTAURANT.id}`, JSON.stringify(updated));
+    setSaving(false);
+  }
+
+  async function uploadPhoto(file) {
+    if (!file) return;
+    setUploading(true);
+    setUploadErr("");
+    const ext  = file.name.split(".").pop();
+    const path = `${RESTAURANT.id}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("menu-photos").upload(path, file, { upsert: true });
+    if (error) {
+      setUploadErr(`Upload failed: ${error.message}`);
+      setUploading(false);
+      return;
+    }
+    const { data } = supabase.storage.from("menu-photos").getPublicUrl(path);
+    setForm(f => ({ ...f, image: data.publicUrl }));
+    setUploading(false);
+  }
+
+  function startEdit(item) { setForm({ ...item, image: item.image || "" }); setEditing(item.id); }
+  function startNew()       { setForm(BLANK_ITEM); setEditing("new"); }
+  function cancelEdit()     { setEditing(null); setForm(BLANK_ITEM); setUploadErr(""); }
+
+  async function saveItem() {
+    if (!form.name.trim() || !form.price) return;
+    let updated;
+    if (editing === "new") {
+      updated = [...items, { ...form, id: Date.now(), price: parseFloat(form.price) }];
+    } else {
+      updated = items.map(i => i.id === editing ? { ...form, id: i.id, price: parseFloat(form.price) } : i);
+    }
+    setItems(updated);
+    await save(updated);
+    cancelEdit();
+  }
+
+  async function deleteItem(id) {
+    if (!confirm("Remove this item?")) return;
+    const updated = items.filter(i => i.id !== id);
+    setItems(updated);
+    await save(updated);
+  }
+
+  const categories = [...new Set(items.map(i => i.category))];
+
+  return (
+    <div className="history-overlay">
+      <div className="history-panel">
+        <div className="history-hdr">
+          <h2>🍽️ Menu Editor</h2>
+          <button className="history-close" onClick={onClose}>✕</button>
+        </div>
+
+        {editing ? (
+          <div className="card" style={{margin:"8px 0"}}>
+            <h3>{editing === "new" ? "Add Item" : "Edit Item"}</h3>
+            <input className="inp" placeholder="Item name *" value={form.name}
+              onChange={e => setForm({...form, name: e.target.value})} />
+            <select className="inp" value={form.category}
+              onChange={e => setForm({...form, category: e.target.value})}>
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <input className="inp" placeholder="Description" value={form.desc}
+              onChange={e => setForm({...form, desc: e.target.value})} />
+            <input className="inp" type="number" step="0.01" placeholder="Price *" value={form.price}
+              onChange={e => setForm({...form, price: e.target.value})} />
+
+            <div className="photo-upload">
+              {form.image && <img src={form.image} alt="preview" className="photo-preview" />}
+              <label className="photo-label">
+                {uploading ? "Uploading…" : form.image ? "📷 Change Photo" : "📷 Add Photo"}
+                <input type="file" accept="image/*" style={{display:"none"}}
+                  onChange={e => uploadPhoto(e.target.files[0])} disabled={uploading} />
+              </label>
+              {form.image && (
+                <button className="btn-sm danger" onClick={() => setForm(f => ({...f, image: ""}))}>
+                  Remove
+                </button>
+              )}
+            </div>
+            {uploadErr && <p style={{color:"#c0392b", fontSize:"0.8rem", marginTop:4}}>{uploadErr}</p>}
+
+            <div className="row-gap" style={{marginTop:10}}>
+              <button className="btn-primary" onClick={saveItem} disabled={saving || uploading}>
+                {saving ? "Saving…" : "✅ Save"}
+              </button>
+              <button className="btn-ghost" onClick={cancelEdit}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <button className="btn-primary full" style={{marginBottom:12}} onClick={startNew}>
+            + Add New Item
+          </button>
+        )}
+
+        {categories.map(cat => (
+          <div key={cat}>
+            <div className="section-label" style={{padding:"10px 0 4px"}}>{cat}</div>
+            {items.filter(i => i.category === cat).map(item => (
+              <div key={item.id} className="menu-edit-row">
+                {item.image && <img src={item.image} alt={item.name} className="menu-thumb" />}
+                <div style={{flex:1}}>
+                  <div className="menu-name">{item.name}</div>
+                  <div className="menu-desc">{item.desc}</div>
+                  <div className="menu-price">{fmt(item.price)}</div>
+                </div>
+                <div style={{display:"flex", gap:6, flexShrink:0}}>
+                  <button className="btn-sm" onClick={() => startEdit(item)}>✏️</button>
+                  <button className="btn-sm danger" onClick={() => deleteItem(item.id)}>🗑️</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

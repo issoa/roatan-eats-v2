@@ -255,6 +255,67 @@ body {
 .settings { border: 1.5px solid #fde8dd; }
 .hint { font-size: 0.8rem; color: #888; margin-top: 4px; }
 
+/* ── History overlay ───────────────────────────────────────────────────────── */
+.history-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 200;
+  display: flex; align-items: flex-end;
+  justify-content: center;
+}
+.history-panel {
+  background: #f5f0eb;
+  width: 100%; max-width: 480px;
+  max-height: 85vh;
+  border-radius: 20px 20px 0 0;
+  padding: 16px 12px 32px;
+  overflow-y: auto;
+}
+.history-hdr {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px; padding: 0 4px;
+}
+.history-hdr h2 { font-size: 1.1rem; font-weight: 700; }
+.history-close {
+  background: #ddd; border: none; border-radius: 50%;
+  width: 30px; height: 30px; font-size: 0.9rem; cursor: pointer;
+}
+
+/* ── Menu editor row ───────────────────────────────────────────────────────── */
+.menu-edit-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: white; border-radius: 10px; padding: 10px 12px;
+  margin-bottom: 6px; gap: 10px;
+}
+.menu-thumb {
+  width: 52px; height: 52px; border-radius: 8px;
+  object-fit: cover; flex-shrink: 0;
+}
+
+/* ── Photo upload (menu editor) ────────────────────────────────────────────── */
+.photo-upload {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 10px; flex-wrap: wrap;
+}
+.photo-preview {
+  width: 80px; height: 80px; border-radius: 10px;
+  object-fit: cover; border: 1.5px solid #eee;
+}
+.photo-label {
+  background: #f5f0eb; border: 1.5px dashed #ccc;
+  border-radius: 8px; padding: 8px 14px;
+  font-size: 0.85rem; font-weight: 600; color: #666;
+  cursor: pointer;
+}
+.photo-label:hover { border-color: #e8734a; color: #e8734a; }
+
+/* ── Menu item photo (customer view) ──────────────────────────────────────── */
+.menu-item-img {
+  width: 100%; border-radius: 10px;
+  object-fit: cover; max-height: 160px;
+  margin-bottom: 6px; display: block;
+}
+
 /* ── QR Code page ──────────────────────────────────────────────────────────── */
 .qr-page {
   display: flex; flex-direction: column;
