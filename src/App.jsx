@@ -106,7 +106,7 @@ function QRView() {
 // =============================================================================
 // HISTORY PANEL (shared by all 3 views)
 // =============================================================================
-function HistoryPanel({ title, filterFn, labelFn, onClose }) {
+function HistoryPanel({ title, filterFn, labelFn, onClose, onReorder }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -136,6 +136,15 @@ function HistoryPanel({ title, filterFn, labelFn, onClose }) {
             <div className="order-meta">📍 {o.delivery_address}</div>
             {o.items && <div className="order-meta">🍽️ {o.items.map(i=>`${i.name} ×${i.quantity}`).join(", ")}</div>}
             <div className="order-meta">💵 {fmt(o.total)} · {o.order_time}</div>
+            {onReorder && o.items && o.items.length > 0 && (
+              <button
+                className="btn-primary"
+                style={{marginTop:10, width:"100%", padding:"9px"}}
+                onClick={() => onReorder(o)}
+              >
+                🔁 Reorder
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -354,6 +363,17 @@ function CustomerView() {
           filterFn={(o) => o.customer_phone === phone && o.status === "delivered"}
           labelFn={(o) => o.status}
           onClose={() => setShowHistory(false)}
+          onReorder={(order) => {
+            // Rebuild cart by matching saved item names against current menu
+            const newCart = {};
+            (order.items || []).forEach((saved) => {
+              const match = menu.find((m) => m.name === saved.name);
+              if (match) newCart[match.id] = (newCart[match.id] || 0) + saved.quantity;
+            });
+            setCart(newCart);
+            setShowHistory(false);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
         />
       )}
 
