@@ -294,10 +294,27 @@ function CustomerView() {
       </header>
 
       <div className="card">
+        <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6}}>
+          <span style={{fontSize:"0.8rem", fontWeight:700, color:"#aaa", textTransform:"uppercase", letterSpacing:"0.05em"}}>Order Summary</span>
+          <button
+            className="btn-sm danger"
+            style={{fontSize:"0.75rem", padding:"4px 10px"}}
+            onClick={() => { setCart({}); setStep("menu"); }}
+          >🗑️ Clear cart</button>
+        </div>
         {cartItems.map((i) => (
-          <div key={i.id} className="row">
-            <span>{i.name} ×{cart[i.id]}</span>
+          <div key={i.id} className="row" style={{gap:8}}>
+            <span style={{flex:1}}>{i.name} ×{cart[i.id]}</span>
             <span>{fmt(i.price * cart[i.id])}</span>
+            <button
+              className="cart-remove"
+              onClick={() => {
+                const next = { ...cart };
+                delete next[i.id];
+                if (Object.keys(next).length === 0) { setCart({}); setStep("menu"); }
+                else setCart(next);
+              }}
+            >×</button>
           </div>
         ))}
         <div className="row muted"><span>Tax (12%)</span><span>{fmt(tax)}</span></div>

@@ -199,6 +199,15 @@ body {
 
 .row-gap { display: flex; gap: 8px; margin-top: 10px; }
 
+/* ── Cart item remove button ───────────────────────────────────────────────── */
+.cart-remove {
+  background: none; border: none;
+  color: #ccc; font-size: 1.1rem; font-weight: 700;
+  cursor: pointer; line-height: 1; padding: 2px 4px;
+  flex-shrink: 0;
+}
+.cart-remove:hover { color: #c0392b; }
+
 /* ── Order cards ───────────────────────────────────────────────────────────── */
 .order.order-new { border-left: 4px solid #e8734a; }
 .order.dimmed    { opacity: 0.5; }
