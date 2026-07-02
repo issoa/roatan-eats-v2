@@ -165,7 +165,6 @@ function CustomerView() {
   const [zone, setZone]         = useState(() => localStorage.getItem("c_zone")  || "");
   const [driverPhone, setDriverPhone]       = useState("50497010106");
   const [restaurantZone, setRestaurantZone] = useState(RESTAURANT.zone);
-  const [waLink, setWaLink]     = useState("");
   const [orderError, setOrderError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -258,7 +257,6 @@ function CustomerView() {
       setOrderError(`Could not place order: ${error.message}`);
       return;
     }
-    setWaLink(waUrl(freshDriverPhone, msg));
     setStep("done");
   }
 
@@ -269,15 +267,14 @@ function CustomerView() {
       <div className="done">
         <div className="done-icon">✅</div>
         <h2>Order Received!</h2>
-        <p>Tap below to send your order to the driver on WhatsApp.</p>
-        <a className="btn-wa full" href={waLink} target="_blank" rel="noreferrer">
-          📲 Send Order to Driver
-        </a>
-        <a className="btn-wa full" style={{background:"#128c7e", marginTop:8}}
-          href={waUrl(driverPhone, `Hi! I just placed an order and want to follow up 🛵`)}
-          target="_blank" rel="noreferrer">
-          💬 Contact Driver
-        </a>
+        <p>Your order is on its way. The driver will contact you on WhatsApp.</p>
+        {driverPhone && (
+          <a className="btn-wa full"
+            href={waUrl(driverPhone, `Hi! I just placed an order and want to follow up 🛵`)}
+            target="_blank" rel="noreferrer">
+            💬 Contact Driver
+          </a>
+        )}
         <button className="btn-ghost full" onClick={() => { setCart({}); setNote(""); setStep("menu"); }}>
           ← Back to Menu
         </button>
