@@ -176,7 +176,14 @@ function CustomerView() {
       if (s.active_driver_phone) setDriverPhone(s.active_driver_phone.replace(/\D/g, ""));
       if (s.restaurant_zone)     setRestaurantZone(s.restaurant_zone);
       if (s[`menu_${RESTAURANT.id}`]) {
-        try { setMenu(JSON.parse(s[`menu_${RESTAURANT.id}`])); } catch {}
+        try {
+          const saved = JSON.parse(s[`menu_${RESTAURANT.id}`]);
+          // Merge saved menu with hardcoded defaults — use saved photo if set, else fall back to default
+          setMenu(saved.map(item => {
+            const def = RESTAURANT.menu.find(d => d.id === item.id);
+            return { ...def, ...item, image: item.image || (def && def.image) || "" };
+          }));
+        } catch {}
       }
       if (s[`logo_${RESTAURANT.id}`]) setLogo(s[`logo_${RESTAURANT.id}`]);
     });
