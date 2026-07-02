@@ -263,7 +263,7 @@ function CustomerView() {
   // ── Done screen ─────────────────────────────────────────────────────────────
   if (step === "done") return (
     <div className="app">
-      <header className="hdr"><h1>{RESTAURANT.emoji} {RESTAURANT.name}</h1></header>
+      <header className="hdr hdr-logo"><img src="/logo.png" alt="Chicken Shack" className="hdr-logo-img" /></header>
       <div className="done">
         <div className="done-icon">✅</div>
         <h2>Order Received!</h2>
@@ -355,9 +355,10 @@ function CustomerView() {
   // ── Menu ────────────────────────────────────────────────────────────────────
   return (
     <div className="app">
-      <header className="hdr">
-        <div className="hdr-row">
-          <h1>{RESTAURANT.emoji} {RESTAURANT.name}</h1>
+      <header className="hdr hdr-logo">
+        <img src="/logo.png" alt="Chicken Shack" className="hdr-logo-img" />
+        <div className="hdr-row" style={{marginTop:8}}>
+          <div style={{flex:1}} />
           <div className="hdr-actions">
             {driverPhone && (
               <a className="btn-wa-sm"
@@ -367,8 +368,7 @@ function CustomerView() {
             <button className="btn-sm" onClick={() => setShowHistory(true)}>📋 History</button>
           </div>
         </div>
-        <p className="sub">{RESTAURANT.tagline}</p>
-        <p className="meta">{RESTAURANT.hours} · {RESTAURANT.address}</p>
+        <p className="meta" style={{textAlign:"center", marginTop:4}}>{RESTAURANT.hours} · {RESTAURANT.address}</p>
       </header>
 
       {showHistory && (

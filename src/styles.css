@@ -26,6 +26,16 @@ body {
 .hdr .meta { font-size: 0.76rem; opacity: 0.72; margin-top: 2px; }
 .hdr-row   { display: flex; justify-content: space-between; align-items: center; }
 .hdr-actions { display: flex; gap: 8px; }
+
+/* ── Logo header ───────────────────────────────────────────────────────────── */
+.hdr-logo { text-align: center; padding-top: 12px; padding-bottom: 10px; }
+.hdr-logo-img {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
 .back {
   background: none;
   border: none;
