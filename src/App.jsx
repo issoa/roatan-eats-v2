@@ -168,7 +168,8 @@ function CustomerView() {
   const [orderError, setOrderError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [menu, setMenu] = useState(RESTAURANT.menu);
+  const [menu, setMenu]   = useState(RESTAURANT.menu);
+  const [logo, setLogo]   = useState("/logo.png");
 
   useEffect(() => {
     getSettings().then((s) => {
@@ -177,6 +178,7 @@ function CustomerView() {
       if (s[`menu_${RESTAURANT.id}`]) {
         try { setMenu(JSON.parse(s[`menu_${RESTAURANT.id}`])); } catch {}
       }
+      if (s[`logo_${RESTAURANT.id}`]) setLogo(s[`logo_${RESTAURANT.id}`]);
     });
   }, []);
 
